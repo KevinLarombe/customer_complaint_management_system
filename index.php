@@ -1,4 +1,5 @@
 <?php
+// Central entry point: routes signed-in users to the workspace for their role.
 require_once __DIR__ . '/includes/functions.php';
 if (!empty($_SESSION['user_id'])) {
     if (($_SESSION['role'] ?? '') === 'support_staff') header('Location: admin/dashboard.php');
