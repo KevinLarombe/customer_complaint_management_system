@@ -69,3 +69,16 @@
   .ticket-create-form { grid-template-columns: 1fr; padding: 0 16px 16px; }
   .ticket-create-form .form-actions { grid-column: auto; }
 }
+
+
+/* Small interface refinements */
+.auth-brand .eyebrow{margin:14px 0 2px}
+.auth-brand .brand-mark{margin:0 auto 8px}
+.auth-brand{text-align:center}
+.footer-enhanced{border-top:1px solid #e4e4e4}
+.ticket-card-enhanced{transition:transform .18s ease,box-shadow .18s ease}
+.ticket-card-enhanced:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.06)}
+.delete-ticket-form{margin:0}
+.delete-ticket-button{background:#fff!important;color:#222!important;border:1px solid #bbb!important;padding:7px 10px!important;border-radius:6px!important;font-size:11px!important}
+.delete-ticket-button:hover{background:#111!important;color:#fff!important;border-color:#111!important}
+@media(max-width:760px){.delete-ticket-button{padding:8px 12px!important}}
