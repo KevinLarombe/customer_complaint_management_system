@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
     if (!preg_match('/^[A-Za-z0-9_.-]{4,50}$/', $username)) $error = 'Username must be 4–50 characters and use letters, numbers, dot, underscore, or hyphen.';
-    elseif (strlen($password) < 10) $error = 'Use a password with at least 10 characters.';
+    elseif (strlen($password) < 8) $error = 'Use a password with at least 8 characters.';
     else {
         try {
             $stmt = $pdo->prepare("INSERT INTO user_accounts (username, password_hash, role) VALUES (?, ?, 'support_staff')");
@@ -21,5 +21,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Initial Support Staff Setup';
 require __DIR__ . '/includes/header.php';
 ?>
-<section class="panel auth-panel"><div class="auth-brand"><span class="brand-mark">CR</span><h1>Initial admin setup</h1><p>Create the first support staff account.</p></div><p class="info-note">This page works only until the first support staff account is created. Remove this file from the server immediately after setup.</p><?php if ($error): ?><p class="form-error"><?= e($error) ?></p><?php endif; ?><form method="post" class="auth-form"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><label>Username<input name="username" required minlength="4" maxlength="50" autocomplete="username"></label><label>Password<input type="password" name="password" required minlength="10" autocomplete="new-password"></label><button type="submit">Create support staff account ↗</button></form></section>
+<section class="panel auth-panel"><div class="auth-brand"><span class="brand-mark">CR</span><h1>Initial admin setup</h1><p>Create the first support staff account.</p></div><p class="info-note">This page works only until the first support staff account is created. Remove this file from the server immediately after setup.</p><?php if ($error): ?><p class="form-error"><?= e($error) ?></p><?php endif; ?><form method="post" class="auth-form"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><label>Username<input name="username" required minlength="4" maxlength="50" autocomplete="username"></label><label>Password<input type="password" name="password" required minlength="8" autocomplete="new-password"></label><button type="submit">Create support staff account ↗</button></form></section>
 <?php require __DIR__ . '/includes/footer.php'; ?>
