@@ -1,4 +1,4 @@
 </main>
-<footer class="footer"><span>© <?= date('Y') ?> Customer Complaint &amp; Service Resolution</span><span>SUPPORT PORTAL <b>·</b> ACADEMIC PROTOTYPE</span></footer>
+<footer class="footer footer-enhanced"><span>© <?= date('Y') ?> Customer Complaint &amp; Service Resolution</span><span>SUPPORT PORTAL <b>·</b> CUSTOMER CARE WORKSPACE</span></footer>
 </body>
 </html>
