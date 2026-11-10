@@ -49,7 +49,7 @@ $pageTitle = 'Technician Registration';
 require __DIR__ . '/includes/header.php';
 ?>
 <section class="panel auth-panel">
-  <div class="auth-brand"><span class="brand-mark">CR</span><h1>Technician registration</h1><p>Create your technician record and account.</p></div>
+  <div class="auth-brand"><span class="brand-mark" aria-hidden="true">CR</span><span class="eyebrow">JOIN THE SUPPORT TEAM</span><h1>Technician registration</h1><p>Create your technician profile and access your assigned service tickets.</p></div>
   <p class="info-note">Your technician record will be added automatically when you create your account. Support staff accounts are created separately.</p>
   <?php if ($error): ?><p class="form-error"><?= e($error) ?></p><?php endif; ?>
   <form method="post" class="auth-form">
