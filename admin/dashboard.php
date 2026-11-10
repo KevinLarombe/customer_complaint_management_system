@@ -77,6 +77,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    } elseif ($action === 'delete_ticket') {
+        $ticketId = trim((string)($_POST['ticket_id'] ?? ''));
+        if ($ticketId === '') {
+            $error = 'Select a valid ticket to delete.';
+        } else {
+            try {
+                $pdo->beginTransaction();
+                $ticketCheck = $pdo->prepare('SELECT ticket_id FROM tickets WHERE ticket_id = ? FOR UPDATE');
+                $ticketCheck->execute([$ticketId]);
+                if (!$ticketCheck->fetch()) {
+                    $pdo->rollBack();
+                    $error = 'The selected ticket could not be found.';
+                } else {
+                    // Remove dependent progress history first because the schema has no cascade rule.
+                    $deleteNotes = $pdo->prepare('DELETE FROM progress_notes WHERE ticket_id = ?');
+                    $deleteNotes->execute([$ticketId]);
+                    $deleteTicket = $pdo->prepare('DELETE FROM tickets WHERE ticket_id = ?');
+                    $deleteTicket->execute([$ticketId]);
+                    $pdo->commit();
+                    $message = 'Ticket ' . $ticketId . ' and its progress history were deleted.';
+                }
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $error = 'Could not delete the ticket. Please try again.';
+            }
+        }
     } elseif ($action === 'update_ticket') {
         $ticketId = trim((string)($_POST['ticket_id'] ?? ''));
         $statusId = filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT);
@@ -150,10 +176,10 @@ require __DIR__ . '/../includes/header.php';
 </section>
 
 <section class="panel table-panel">
-  <div class="panel-heading"><div><span class="eyebrow">TICKET MANAGEMENT</span><h2>Complaint tickets</h2><p>Review tickets and update their assigned technicians or status.</p></div><span class="record-count"><?= count($tickets) ?> RECORDS</span></div>
+  <div class="panel-heading"><div><span class="eyebrow">TICKET MANAGEMENT</span><h2>Complaint tickets</h2><p>Review, update, or remove complaint tickets and their history.</p></div><span class="record-count"><?= count($tickets) ?> RECORDS</span></div>
   <div class="toolbar"><label class="search-box"><span aria-hidden="true">⌕</span><input id="ticketSearch" type="search" placeholder="Search ticket, subscriber, issue..." aria-label="Search complaint tickets"></label><label class="filter-box"><span>STATUS</span><select id="statusFilter"><option value="">All statuses</option><?php foreach ($statuses as $st): ?><option value="<?= e(strtolower($st['status_name'])) ?>"><?= e($st['status_name']) ?></option><?php endforeach; ?></select></label></div>
   <div class="table-wrap"><table class="data-table" id="ticketsTable">
-    <thead><tr><th>TICKET</th><th>SUBSCRIBER</th><th>ISSUE / PRIORITY</th><th>TECHNICIAN</th><th>STATUS</th><th>OPENED</th><th>UPDATE TICKET</th></tr></thead>
+    <thead><tr><th>TICKET</th><th>SUBSCRIBER</th><th>ISSUE / PRIORITY</th><th>TECHNICIAN</th><th>STATUS</th><th>OPENED</th><th>UPDATE TICKET</th><th>REMOVE</th></tr></thead>
     <tbody>
     <?php foreach ($tickets as $ticket): ?>
       <tr data-status="<?= e(strtolower($ticket['status_name'])) ?>">
@@ -174,6 +200,14 @@ require __DIR__ . '/../includes/header.php';
             <select id="status-<?= e($ticket['ticket_id']) ?>" name="status_id"><?php foreach ($statuses as $st): ?><option value="<?= (int)$st['status_id'] ?>" <?= (int)$ticket['status_id'] === (int)$st['status_id'] ? 'selected' : '' ?>><?= e($st['status_name']) ?></option><?php endforeach; ?></select>
             <input name="resolution_summary" placeholder="Resolution summary (required to close)" value="<?= e($ticket['resolution_summary']) ?>" aria-label="Resolution summary for <?= e($ticket['ticket_id']) ?>">
             <button type="submit" class="button-small">Save</button>
+          </form>
+        </td>
+        <td>
+          <form method="post" class="delete-ticket-form" onsubmit="return confirm('Permanently delete <?= e($ticket['ticket_id']) ?> and all of its progress notes? This cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="action" value="delete_ticket">
+            <input type="hidden" name="ticket_id" value="<?= e($ticket['ticket_id']) ?>">
+            <button type="submit" class="delete-ticket-button">Delete</button>
           </form>
         </td>
       </tr>
