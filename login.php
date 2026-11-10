@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Sign in';
 require __DIR__ . '/includes/header.php';
 ?>
-<section class="panel auth-panel"><div class="auth-brand"><span class="brand-mark">CR</span><h1>Welcome back</h1><p>Sign in to your support workspace.</p></div>
+<section class="panel auth-panel"><div class="auth-brand"><span class="brand-mark" aria-hidden="true">CR</span><span class="eyebrow">ISP SUPPORT PORTAL</span><h1>Welcome back</h1><p>Sign in to your support workspace and continue where you left off.</p></div>
 <?php if (isset($_GET['setup'])): ?><p class="form-success">Support staff account created. Sign in below.</p><?php endif; ?>
 <?php if (isset($_GET['registered'])): ?><p class="form-success">Technician account created. Sign in below.</p><?php endif; ?>
 <?php if ($error): ?><p class="form-error"><?= e($error) ?></p><?php endif; ?>
