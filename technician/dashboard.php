@@ -2,29 +2,49 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_role('technician');
+
 $techId = $_SESSION['technician_id'] ?? '';
 if (!$techId) { http_response_code(403); exit('This account is not linked to a technician record.'); }
+
 $message = '';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $ticketId = trim((string)($_POST['ticket_id'] ?? ''));
-    $note = trim((string)($_POST['progress_note'] ?? ''));
-    $check = $pdo->prepare('SELECT ticket_id FROM tickets WHERE ticket_id = ? AND technician_id = ?');
-    $check->execute([$ticketId, $techId]);
-    if (!$check->fetch()) $error = 'You can only add notes to tickets assigned to your technician account.';
-    elseif ($note === '') $error = 'Progress note cannot be empty.';
-    elseif (mb_strlen($note) > 5000) $error = 'Progress note must not exceed 5,000 characters.';
-    else {
-        $stmt = $pdo->prepare('INSERT INTO progress_notes (ticket_id, author_user_id, progress_note) VALUES (?, ?, ?)');
-        $stmt->execute([$ticketId, $_SESSION['user_id'], $note]);
-        $message = 'Progress note added to ' . $ticketId . '.';
+    $action = (string)($_POST['action'] ?? '');
+
+    if ($action === 'add_progress') {
+        $ticketId = trim((string)($_POST['ticket_id'] ?? ''));
+        $note = trim((string)($_POST['progress_note'] ?? ''));
+        $check = $pdo->prepare('SELECT ticket_id FROM tickets WHERE ticket_id = ? AND technician_id = ?');
+        $check->execute([$ticketId, $techId]);
+        if (!$check->fetch()) $error = 'You can only add notes to tickets assigned to your technician account.';
+        elseif ($note === '') $error = 'Progress note cannot be empty.';
+        elseif (mb_strlen($note) > 5000) $error = 'Progress note must not exceed 5,000 characters.';
+        else {
+            $stmt = $pdo->prepare('INSERT INTO progress_notes (ticket_id, author_user_id, progress_note) VALUES (?, ?, ?)');
+            $stmt->execute([$ticketId, $_SESSION['user_id'], $note]);
+            $message = 'Progress note added to ' . $ticketId . '.';
+        }
+    } elseif ($action === 'delete_progress') {
+        $progressId = filter_input(INPUT_POST, 'progress_id', FILTER_VALIDATE_INT);
+        $ticketId = trim((string)($_POST['ticket_id'] ?? ''));
+
+        // Only the author may delete their own note, and only while the ticket is assigned to them.
+        $delete = $pdo->prepare(
+            'DELETE pn FROM progress_notes pn
+             INNER JOIN tickets t ON t.ticket_id = pn.ticket_id
+             WHERE pn.progress_id = ? AND pn.ticket_id = ? AND pn.author_user_id = ? AND t.technician_id = ?'
+        );
+        $delete->execute([$progressId, $ticketId, $_SESSION['user_id'], $techId]);
+        if ($delete->rowCount() === 1) $message = 'The selected progress note was deleted.';
+        else $error = 'The progress note could not be deleted. You can only delete your own notes on your assigned tickets.';
     }
 }
+
 $stmt = $pdo->prepare("SELECT t.ticket_id, s.customer_name, s.service_address, ic.category_name, p.priority_name, ts.status_name, t.opened_date FROM tickets t JOIN subscribers s ON s.customer_no=t.customer_no JOIN issue_categories ic ON ic.category_id=t.category_id JOIN priorities p ON p.priority_id=t.priority_id JOIN ticket_statuses ts ON ts.status_id=t.status_id WHERE t.technician_id = ? ORDER BY t.opened_date DESC");
 $stmt->execute([$techId]);
 $tickets = $stmt->fetchAll();
-$noteStmt = $pdo->prepare('SELECT progress_timestamp, progress_note FROM progress_notes WHERE ticket_id = ? ORDER BY progress_timestamp DESC');
+$noteStmt = $pdo->prepare('SELECT progress_id, author_user_id, progress_timestamp, progress_note FROM progress_notes WHERE ticket_id = ? ORDER BY progress_timestamp DESC, progress_id DESC');
 $pageTitle = 'Technician Dashboard';
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -40,8 +60,23 @@ require __DIR__ . '/../includes/header.php';
     <div class="ticket-card-head"><div><span class="eyebrow">COMPLAINT TICKET</span><h2><?= e($ticket['ticket_id']) ?></h2></div><span class="status-pill status-<?= e(strtolower(str_replace(' ', '-', $ticket['status_name']))) ?>"><?= e($ticket['status_name']) ?></span></div>
     <h3 class="issue-title"><?= e($ticket['category_name']) ?></h3>
     <div class="ticket-details"><div><span>SUBSCRIBER</span><strong><?= e($ticket['customer_name']) ?></strong></div><div><span>SERVICE ADDRESS</span><strong><?= e($ticket['service_address']) ?></strong></div><div><span>PRIORITY</span><strong><?= e($ticket['priority_name']) ?></strong></div><div><span>OPENED</span><strong><?= e($ticket['opened_date']) ?></strong></div></div>
-    <form method="post" class="progress-form"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="ticket_id" value="<?= e($ticket['ticket_id']) ?>"><label for="note-<?= e($ticket['ticket_id']) ?>">Add troubleshooting progress</label><textarea id="note-<?= e($ticket['ticket_id']) ?>" name="progress_note" required maxlength="5000" rows="3" placeholder="Describe the troubleshooting steps taken..."></textarea><div class="form-foot"><small>Up to 5,000 characters</small><button type="submit">Add progress <span aria-hidden="true">↗</span></button></div></form>
-    <details class="history-details"><summary>View progress history</summary><?php $noteStmt->execute([$ticket['ticket_id']]); $notes = $noteStmt->fetchAll(); ?><?php if (!$notes): ?><p class="muted">No progress notes have been added yet.</p><?php else: ?><ul class="notes"><?php foreach ($notes as $note): ?><li><time><?= e($note['progress_timestamp']) ?></time><p><?= nl2br(e($note['progress_note'])) ?></p></li><?php endforeach; ?></ul><?php endif; ?></details>
+    <form method="post" class="progress-form"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="add_progress"><input type="hidden" name="ticket_id" value="<?= e($ticket['ticket_id']) ?>"><label for="note-<?= e($ticket['ticket_id']) ?>">Add troubleshooting progress</label><textarea id="note-<?= e($ticket['ticket_id']) ?>" name="progress_note" required maxlength="5000" rows="3" placeholder="Describe the troubleshooting steps taken..."></textarea><div class="form-foot"><small>Up to 5,000 characters</small><button type="submit">Add progress <span aria-hidden="true">↗</span></button></div></form>
+    <details class="history-details"><summary>View progress history</summary>
+      <?php $noteStmt->execute([$ticket['ticket_id']]); $notes = $noteStmt->fetchAll(); ?>
+      <?php if (!$notes): ?><p class="muted">No progress notes have been added yet.</p><?php else: ?>
+        <ul class="notes"><?php foreach ($notes as $note): ?><li><time><?= e($note['progress_timestamp']) ?></time><p><?= nl2br(e($note['progress_note'])) ?></p>
+          <?php if ((int)$note['author_user_id'] === (int)$_SESSION['user_id']): ?>
+            <form method="post" class="delete-note-form" onsubmit="return confirm('Delete this progress note? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+              <input type="hidden" name="action" value="delete_progress">
+              <input type="hidden" name="ticket_id" value="<?= e($ticket['ticket_id']) ?>">
+              <input type="hidden" name="progress_id" value="<?= (int)$note['progress_id'] ?>">
+              <button type="submit" class="delete-note-button">Delete this note</button>
+            </form>
+          <?php endif; ?>
+        </li><?php endforeach; ?></ul>
+      <?php endif; ?>
+    </details>
   </article>
 <?php endforeach; ?>
 </div>
