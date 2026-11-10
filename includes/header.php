@@ -17,8 +17,8 @@ $currentRole = $_SESSION['role'] ?? '';
 <body>
 <header class="topbar">
   <a class="brand" href="<?= e(app_url('index.php')) ?>">
-    <span class="brand-mark">CR</span>
-    <span class="brand-copy"><strong>COMPLAINT RESOLUTION</strong><small>ISP CUSTOMER SUPPORT</small></span>
+    <span class="brand-mark" aria-hidden="true">CR</span>
+    <span class="brand-copy"><strong>COMPLAINT RESOLUTION</strong><small>ISP CUSTOMER SUPPORT · SERVICE DESK</small></span>
   </a>
   <nav class="top-nav" aria-label="Account navigation">
     <?php if (!empty($_SESSION['user_id'])): ?>
